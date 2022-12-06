@@ -77,3 +77,116 @@ test(); // sinh ra this
  * }
  * obj.test() //this =obj
  */
+
+// API- promise work
+var promiseA = new Promise(function (resolve, reject) {
+  //call api
+  setTimeout(function () {
+    var res = {
+      data: [
+        { name: "huy", age: 12 },
+        { name: "hieu", age: 12 },
+      ],
+    };
+    resolve(res);
+    // reject(res)
+  }, 2000);
+  promiseA
+    .then(function (res) {
+      console.log(res);
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
+});
+var promiseB = new Promise(function (resolve, reject) {
+  //call api
+  setTimeout(function () {
+    var res = {
+      data: [
+        { name: "huy", age: 12 },
+        { name: "hieu", age: 12 },
+      ],
+    };
+    resolve(res);
+    // reject(res)
+  }, 4000);
+  promiseB
+    .then(function (res) {
+      console.log(res);
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
+});
+
+// code chỉ chạy khi cả A và B đều phải xong => promiseAll
+// then chạy khi cả 2 thành công -  cactch chạy khi 1 trong 2 thất bại
+Promise.all([promiseA, promiseB])
+  .then(function (res) {
+    console.log(res);
+  })
+  .catch(function (err) {
+    console.log(err);
+  });
+
+// promiseB phụ thuộc vào giá trị trả về từ promiseA => promise chaining || async await       
+
+promiseA
+  .then(function (res) {
+    console.log(res);
+    // call API => promiseB
+    var promiseB = new Promise(function (resolve, reject) {
+      setTimeout(function () {
+        var res = {
+          data: [
+            { name: "huy", age: 12 },
+            { name: "hieu", age: 12 },
+          ],
+        };
+        resolve(res);
+        // reject(res)
+      }, 4000);
+      promiseB
+        .then(function (res) {
+          console.log(res);
+        })
+        .catch(function (err) {
+          console.log(err);
+        });
+    });
+    return promiseB
+  })
+  .then(function(res){
+    var promiseC = new Promise(function (resolve, reject) {
+      setTimeout(function () {
+        var res = {
+          data: [
+            { name: "huy", age: 12 },
+            { name: "hieu", age: 12 },
+          ],
+        };
+        resolve(res);
+        // reject(res)
+      }, 4000);
+      promiseB
+        .then(function (res) {
+          console.log(res);
+        })
+        .catch(function (err) {
+          console.log(err);
+        });
+    });
+    return promiseC
+  })// giải quyết cho promiseB
+  .then() // giải quyết cho promiseC
+  .catch(function (err) {
+    console.log(err);
+  });
+
+
+  // primitive type: number , string, boolean, null, undefined -> lưu ở stack memory
+ // ngoài ra còn có: object (reference type: dữ liệu tham chiếu): -> lưu ở heap memory (lưu dữ liệu ko giới hạn: có thể thêm data liên tục)
+ // object.assign({}, object có sẵn) ex:student2 = object.assign({}, student1) // var student2 = {} -> object.assign{student2, student1}
+
+ // var student2 = JSON.parse(JSON.stringify(student1)); dùng cho object ko có method

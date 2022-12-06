@@ -81,13 +81,7 @@ function createStudent() {
     chemistry
   );
   // gửi request lên API
-  var promise = axios({
-    url: "https://5bd2959ac8f9e400130cb7e9.mockapi.io/api/students",
-    method: "POST",
-    // request body
-    data: student,
-  });
-
+  var promise = studentService.createStudent(student);
   promise
     .then(function (res) {
       alert("Thêm thành công");
@@ -95,8 +89,7 @@ function createStudent() {
     })
     .catch(function (err) {
       console.log(err);
-    }); 
-
+    });
   // // 4. thêm đối tượng sinh viên vào danh sách
   // studentList.push(student);
 
@@ -133,7 +126,7 @@ function renderStudent(data) {
          </td>
     </tr>`;
   }
-  console.log(html);
+  
   document.getElementById("tbodySinhVien").innerHTML = html;
 }
 
@@ -144,37 +137,46 @@ function saveLocalStorage() {
   localStorage.setItem("SL", studentListJson);
 }
 
-function fetchStudentList() {
+async function fetchStudentList() {
   studentList = [];
   renderStudent();
   document.getElementById("loader").style.display = "block";
   // cập nhật danh sách + in ra
   // call api backend => studentList
   // axios khác với setTimeout : không biết khi nào data đc trả về
-  var promise = axios({
-    url: "https://5bd2959ac8f9e400130cb7e9.mockapi.io/api/students",
-    method: "GET",
-  });
-
-  promise
-    .then(function (res) {
-      console.log("success", res);
-      studentList = mapStudentList(res.data);
+  var promise = studentService.fetchStudents();
+  // async await  : await chuyển promise từ bất đồng bộ -> đồng bộ (chỉ dùng cho promise)
+  try {
+    // những đoạn code nghi là có lỗi
+    var res = await promise
+    studentList = mapStudentList(res.data);
       renderStudent();
-    })
-    .catch(function (err) {
-      console.log("error", err);
-    })
-    .finally(function () {
-      document.getElementById("loader").style.display = "none";
-    });
+  } catch(err){
+    console.log(err)
+  } finally {
+    document.getElementById("loader").style.display = "none";
+  }
 
+  // promise
+    // .then(function (res) {
+    //   console.log("success", res);
+    //   studentList = mapStudentList(res.data);
+    //   renderStudent();
+    // })
+    // .catch(function (err) {
+    //   console.log("error", err);
+    // })
+    // .finally(function () {
+    //   document.getElementById("loader").style.display = "none";
+    // });
+  
   // promise : PENDING - FULFILL - REJECT  3 trạng thái của promise
 }
 
 // hàm chạy khi bật browser : dành cho code muốn chạy ngay lập tức khi bật web
-window.onload = function () {
-  fetchStudentList();
+window.onload = async function () {
+ await fetchStudentList(); // return promise 
+  
 };
 
 // Map data : input dataLocal => output : data mới
@@ -201,74 +203,68 @@ function mapStudentList(local) {
 // Xóa sinh viên
 function deleteStudent(id) {
   Swal.fire({
-    title: 'Are you sure?',
+    title: "Are you sure?",
     text: "You won't be able to revert this!",
-    icon: 'warning',
+    icon: "warning",
     showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, delete it!'
-  }).then(function (result){
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Yes, delete it!",
+  }).then(function (result) {
     if (result.isConfirmed) {
-      axios({
-        url: "https://5bd2959ac8f9e400130cb7e9.mockapi.io/api/students/" + id,
-        method: "DELETE",
-      })
-        .then(function (res) {
-          Swal.fire(
-            'Deleted!',
-            'Your file has been deleted.',
-            'success',
-          )
-          fetchStudentList(res)
+      var promise = studentService.deleteStudent(id)
+        promise.then(function (res) {
+          Swal.fire("Deleted!", "Your file has been deleted.", "success");
+          fetchStudentList(res);
         })
         .catch(function (err) {
-          console.log(err)
-        }).finally(function(){
-          document.getElementById("loader").style.display = "none";
+          console.log(err);
         })
-
-    } 
-
-  })
-
+        .finally(function () {
+          document.getElementById("loader").style.display = "none";
+        });
+    }
+  });
 }
 
 // Update lại thông tin
 
 // Bước 1 : chọn sv muốn cập nhật lại thông tin => fill info lên form
 function getUpdateStudent(id) {
-  var index = findById(id);
+  // call API backbend => trả về chi tiết đối tượng sinh viên
+   var promise = studentService.fetchStudentDetail(id)
+    promise.then(function (res) {
+      var student = res.data;
+      // fill thông tin ngược lên form
+      document.getElementById("txtMaSV").value = student.studentId;
+      document.getElementById("txtTenSV").value = student.fullName;
+      document.getElementById("txtEmail").value = student.email;
+      document.getElementById("txtNgaySinh").value = student.dob;
+      document.getElementById("khSV").value = student.course;
+      document.getElementById("txtDiemToan").value = student.math;
+      document.getElementById("txtDiemLy").value = student.physic;
+      document.getElementById("txtDiemHoa").value = student.chemistry;
 
-  if (index === -1) return alert("Id không tồn tại");
+      // disable input mã sinhv viên
+      document.getElementById("txtMaSV").disabled = true;
 
-  var student = studentList[index];
-  // fill thông tin ngược lên form
-  document.getElementById("txtMaSV").value = student.studentId;
-  document.getElementById("txtTenSV").value = student.fullName;
-  document.getElementById("txtEmail").value = student.email;
-  document.getElementById("txtNgaySinh").value = student.dob;
-  document.getElementById("khSV").value = student.course;
-  document.getElementById("txtDiemToan").value = student.math;
-  document.getElementById("txtDiemLy").value = student.physic;
-  document.getElementById("txtDiemHoa").value = student.chemistry;
+      // đổi mode sang update
+      mode = "update";
+      document.getElementById("btnCreate").innerHTML = "Lưu thay đôi";
+      document.getElementById("btnCreate").classList.add("btn-info");
 
-  // disable input mã sinhv viên
-  document.getElementById("txtMaSV").disabled = true;
+      // add button để cancel update
+      if (document.getElementById("btnCancel")) return;
 
-  // đổi mode sang update
-  mode = "update";
-  document.getElementById("btnCreate").innerHTML = "Lưu thay đôi";
-  document.getElementById("btnCreate").classList.add("btn-info");
-
-  // add button để cancel update
-  var btnCancel = document.createElement("button");
-  btnCancel.innerHTML = " Hủy";
-  btnCancel.type = "button";
-  btnCancel.id = "btnCancel";
-  btnCancel.classList.add("btn", "btn-secondary");
-  btnCancel.onclick = cancelUpdate;
-  document.getElementById("btnGroup").appendChild(btnCancel);
+      var btnCancel = document.createElement("button");
+      btnCancel.innerHTML = " Hủy";
+      btnCancel.type = "button";
+      btnCancel.id = "btnCancel";
+      btnCancel.classList.add("btn", "btn-warning");
+      btnCancel.onclick = cancelUpdate;
+      document.getElementById("btnGroup").appendChild(btnCancel);
+    })
+    .catch(function (err) {});
 }
 // Bước 2 : cho người dùng sửa trên form, nhấn nút lưu để cập nhật
 function updateStudent() {
@@ -282,18 +278,25 @@ function updateStudent() {
   var physic = +document.getElementById("txtDiemLy").value;
   var chemistry = +document.getElementById("txtDiemHoa").value;
 
-  var index = findById(id);
-  var student = studentList[index];
-  student.fullName = fullName;
-  student.email = email;
-  student.dob = dob;
-  student.course = course;
-  student.math = math;
-  student.physic = physic;
-  student.chemistry = chemistry;
-
-  renderStudent();
-  saveLocalStorage();
+  var student = new Student(
+    id,
+    fullName,
+    email,
+    dob,
+    course,
+    math,
+    physic,
+    chemistry
+  );
+  // call API
+  var promise = studentService.updateStudent(student)
+    promise.then(function (res) {
+      alert("Cập nhật thành công");
+      fetchStudentList(res);
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
 
   cancelUpdate();
 }
